@@ -1,0 +1,62 @@
+---
+version: '3.7'
+services:
+
+  owncloud:
+    image: owncloud/server:10.0
+    restart: always
+    depends_on:
+      - db
+      - redis
+    environment:
+      OWNCLOUD_DOMAIN: oc.example.com
+      OWNCLOUD_SUB_URL: /owncloud
+      OWNCLOUD_DB_TYPE: mysql
+      OWNCLOUD_DB_NAME: owncloud
+      OWNCLOUD_DB_USERNAME: owncloud
+      OWNCLOUD_DB_PASSWORD: "ownclouddbpw"
+      OWNCLOUD_DB_HOST: db
+      OWNCLOUD_ADMIN_USERNAME: admin
+      OWNCLOUD_ADMIN_PASSWORD: admin
+      OWNCLOUD_MYSQL_UTF8MB4: "true"
+      OWNCLOUD_REDIS_ENABLED: "true"
+      OWNCLOUD_REDIS_HOST: redis
+    volumes:
+      - type: bind
+        source: /data/volumes/owncloud/files
+        target: /mnt/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:oc.example.com;PathPrefix:/owncloud"
+      - "traefik.frontend.passHostHeader=true"
+    
+  db:
+    image: mariadb:10
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "dbmasterpw"
+      MYSQL_DATABASE: owncloud
+      MYSQL_USER: owncloud
+      MYSQL_PASSWORD: "ownclouddbpw"
+    volumes:
+      - type: bind
+        source: /data/volumes/owncloud/mysql
+        target: /var/lib/mysql
+
+  redis:
+    image: redis:5
+    restart: always
+    volumes:
+      - type: bind
+        source: /data/volumes/owncloud/redis
+        target: /data
+
+  adminer:
+    image: adminer
+    restart: "no"
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:oc.example.com;PathPrefixStrip:/adminer-oc"
+      - "traefik.frontend.passHostHeader=true"
